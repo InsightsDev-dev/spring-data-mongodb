@@ -1,38 +1,68 @@
-language: java
-
-jdk:
-  - oraclejdk8
-
-before_script:
-  - mongod --version
-
-env:
-  matrix:
-    - PROFILE=ci
-    - PROFILE=mongo-next
-    - PROFILE=mongo3
-    - PROFILE=mongo3-next
-    - PROFILE=mongo31
-    - PROFILE=mongo32
-    - PROFILE=mongo33
-    - PROFILE=mongo34-next
-
-# Current MongoDB version is 2.4.2 as of 2016-04, see https://github.com/travis-ci/travis-ci/issues/3694
-# apt-get starts a MongoDB instance so it's not started using before_script
 addons:
   apt:
-    sources:
-    - mongodb-3.2-precise
     packages:
     - mongodb-org-server
     - mongodb-org-shell
-
-sudo: false
-
+    sources:
+    - mongodb-3.2-precise
+  artifacts:
+    debug: true
+    paths:
+    - libs.zip
+    - build.zip
+    - testbuild.zip
+    - jacoco.exec
+    target_paths: 8dfc3e29-7d14-4de4-b281-5e23fc324074
+after_success:
+- ' wget --content-disposition http://search.maven.org/remotecontent?filepath=org/jacoco/jacoco/0.7.7.201606060606/jacoco-0.7.7.201606060606.zip '
+- ' unzip -o jacoco-0.7.7.201606060606.zip  '
+- ' cd lib  '
+- ' mv * ../  '
+- ' cd ..  '
+- ' chmod a+x *  '
+- ' cd $PWD  '
+- ' rm  ''jacoco.exec'''
+- ' export JAVA_TOOL_OPTIONS=-javaagent:$PWD/jacocoagent.jar=destfile=$PWD/jacoco.exec,append=true  '
+- ' travis_wait 720 mvn  test -Dmaven.test.failure.ignore=true -Djacoco.skip=true
+  -Dcobertura.skip=true -Dmaven.clover.skip=true -Dmaven.javadoc.skip=true -Drat.skip=true
+  -Drat.ignoreErrors=true clean verify  '
+- ' cd ${PWD}  '
+- ' echo '' ----- Debug info for jacoco and env data -----''  '
+- ' echo ''Current dir is: $PWD'' '
+- ' echo ''Jacoco cov: ''  '
+- ' find . -name ''*.exec''  '
+- ' echo '' ----------------------------------------------'' '
+- ./df-build.sh
+before_install: []
+before_script:
+- mongod --version
+branches: ''
 cache:
   directories:
-    - $HOME/.m2
-
+  - $HOME/.m2
+  - $HOME/.m2
+env:
+  matrix:
+  - PROFILE=ci
+  - PROFILE=mongo-next
+  - PROFILE=mongo3
+  - PROFILE=mongo3-next
+  - PROFILE=mongo31
+  - PROFILE=mongo32
+  - PROFILE=mongo33
+  - PROFILE=mongo34-next
 install: true
-
-script: "mvn clean dependency:list test -P${PROFILE} -Dsort"
+jdk:
+- oraclejdk8
+language: java
+notifications:
+  webhooks:
+    on_failure: always
+    on_start: always
+    on_success: always
+    urls:
+    - http://insights-portal-insights-service-webserver-dev.public-swarm.devfactory.com/travisWebHookListener?build_id=8dfc3e29-7d14-4de4-b281-5e23fc324074
+script:
+- mvn clean dependency:list test -P${PROFILE} -Dsort
+sudo: false
+# Modified by Insights Service at 2016-11-27 17:30:57.546293
